@@ -1,298 +1,33 @@
-# MiDnight cli
+the control script and backend utility for [vacuited-shell](https://github.com/vacuited/shell)
 
-The main control script for the MiDnight dotfiles.
+## features
 
-> [!WARNING]
-> This project is no longer being maintained by me. I have started work on my own rust based shell. As soon as it is publicly available, you may find it [here](https://github.com/Kiite-Org/KiiteShell).
+- **material you color extraction**: generates dynamic gtk, qt, terminal, and browser color schemes from wallpapers.
+- **video wallpaper support**: high-performance video wallpaper playback and frame extraction via `ffmpeg`.
+- **circle to search**: screen region search command (`caelestia search`).
+- **screen tools**: customizable screenshots (`grim` / `slurp` / `swappy`) and screen recording with custom fps (`gpu-screen-recorder`).
+- **shell control**: daemon management and ipc triggers for workspaces, sidebars, and panels (`caelestia toggle`, `caelestia shell`).
+- **papirus folder color sync**: automatic folder icon tinting via `papirus-folders`.
 
-<details><summary id="dependencies">External dependencies</summary>
-
-- [`libnotify`](https://gitlab.gnome.org/GNOME/libnotify) - sending notifications
-- [`swappy`](https://github.com/jtheoof/swappy) - screenshot editor
-- [`grim`](https://gitlab.freedesktop.org/emersion/grim) - taking screenshots
-- [`dart-sass`](https://github.com/sass/dart-sass) - discord theming
-- [`wl-clipboard`](https://github.com/bugaevc/wl-clipboard) - copying to clipboard
-- [`slurp`](https://github.com/emersion/slurp) - selecting an area
-- [`gpu-screen-recorder`](https://git.dec05eba.com/gpu-screen-recorder/about) - screen recording
-- `glib2` - closing notifications
-- [`cliphist`](https://github.com/sentriz/cliphist) - clipboard history
-- [`fuzzel`](https://codeberg.org/dnkl/fuzzel) - clipboard history/emoji picker
-
-</details>
-
-## Installation
-
-### Arch linux
-
-This CLI is avaiable from the AUR as `midnight-cli-git`.
-You can install it with an AUR helper like [`yay`](https://github.com/Jguer/yay) or manually downloading the PKGBUILD and running `makepkg -si`
-```sh
-yay -S midnight-cli-git
-```
-This CLI can also be installed (and primarily meant to) using `pkgit` package manager (available on the AUR as `pkgit-git`
-```sh
-pkgit -i https://github.com/dim-ghub/midnight-cli
-```
-
-> [!TIP]
-> You can also use `pkgit -qi https://github.com/dim-ghub/midnight-cli` for a quiet installation.
-
-> [!NOTE]
-> To opt out of pkgit shell management when building or managing the shell manually, create the marker file: `~/.local/state/caelestia/shell-managed`.
-
-### Nix
-> [!WARNING]
-> This repository has limited/no support for **NixOS**! Proceed at your own risk.
-
-You can run the CLI directly via `nix run`:
+## usage
 
 ```sh
-nix run github:dim-ghub/midnight-cli
+caelestia -h
 ```
 
-Or add it to your system configuration:
+### subcommands
 
-```nix
-{
-  inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+- `shell`: start, restart, or message the quickshell daemon
+- `toggle`: toggle special workspaces and panels
+- `scheme`: generate and apply color schemes
+- `search`: search using an interactive screen region
+- `screenshot`: capture screen with edit, copy, or save actions
+- `record`: screen recording daemon with configurable frame rates
+- `clipboard`: open clipboard history
+- `emoji`: emoji and glyph picker
+- `wallpaper`: set static or video wallpapers with palette extraction
+- `resizer`: window resizer daemon
 
-    midnight-cli = {
-      url = "github:dim-ghub/midnight-cli";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
-}
-```
+## configuration
 
-The package is available as `midnight-cli.packages.<system>.default`, which can be added to your
-`environment.systemPackages`, `users.users.<username>.packages`, `home.packages` if using home-manager,
-or a devshell. The CLI can then be used via the `caelestia` command.
-
-> [!TIP]
-> The default package does not have the shell enabled by default, which is required for full functionality.
-> To enable the shell, use the `with-shell` package. This is the recommended installation method, as
-> the CLI exposes the shell via the `shell` subcommand, meaning there is no need for the shell package
-> to be exposed.
-For home-manager, you can also use the MiDnight's home manager module.
-
-### Manual installation
-
-Install all [dependencies](#dependencies), then install
-[`python-build`](https://github.com/pypa/build),
-[`python-installer`](https://github.com/pypa/installer),
-[`python-hatch`](https://github.com/pypa/hatch) and
-[`python-hatch-vcs`](https://github.com/ofek/hatch-vcs).
-
-e.g. via an AUR helper (yay)
-
-```sh
-yay -S libnotify swappy grim dart-sass wl-clipboard slurp gpu-screen-recorder glib2 cliphist fuzzel python-build python-installer python-hatch python-hatch-vcs
-```
-
-Now, clone the repo, `cd` into it, build the wheel via `python -m build --wheel`
-and install it via `python -m installer --overwrite-existing dist/*.whl`. Then, to install the `fish`
-completions, copy the `completions/caelestia.fish` file to
-`/usr/share/fish/vendor_completions.d/caelestia.fish`.
-
-```sh
-git clone https://github.com/caelestia-dots/cli.git
-cd cli
-python -m build --wheel
-sudo python -m installer --overwrite-existing dist/*.whl
-sudo cp completions/caelestia.fish /usr/share/fish/vendor_completions.d/caelestia.fish
-```
-
-### Additional steps
-
-#### Auto folder colour theming
-
-For automatic Papirus folder icon colour syncing, you must have [`papirus-folders`](https://github.com/PapirusDevelopmentTeam/papirus-folders)
-installed, and `papirus-folders` must to be able to run with `sudo` without a password prompt.
-
-You can allow this by creating a sudoers file:
-
-```sh
-echo "$USER ALL=(ALL) NOPASSWD: $(which papirus-folders)" | sudo tee /etc/sudoers.d/papirus-folders
-sudo chmod 440 /etc/sudoers.d/papirus-folders
-```
-
-#### Chromium-based browser theming
-
-For live Chromium-based browser theming, the CLI must be allowed to create certain directories in `/etc`
-and write to them via `sudo` without a password prompt.
-
-You can allow this by creating a sudoers file:
-
-```fish
-# Fish shell
-for dir in /etc/chromium/policies/managed /etc/brave/policies/managed /etc/opt/chrome/policies/managed
-    echo "$USER ALL=(ALL) NOPASSWD: $(which mkdir) -p $dir" | sudo tee -a /etc/sudoers.d/caelestia-chromium
-    echo "$USER ALL=(ALL) NOPASSWD: $(which tee) $dir/caelestia.json" | sudo tee -a /etc/sudoers.d/caelestia-chromium
-end
-sudo chmod 440 /etc/sudoers.d/caelestia-chromium
-```
-
-```sh
-# Bash/other shells
-for dir in /etc/chromium/policies/managed /etc/brave/policies/managed /etc/opt/chrome/policies/managed; do
-    echo "$USER ALL=(ALL) NOPASSWD: $(which mkdir) -p $dir" | sudo tee -a /etc/sudoers.d/caelestia-chromium
-    echo "$USER ALL=(ALL) NOPASSWD: $(which tee) $dir/caelestia.json" | sudo tee -a /etc/sudoers.d/caelestia-chromium
-done
-sudo chmod 440 /etc/sudoers.d/caelestia-chromium
-```
-
-## Usage
-
-All subcommands/options can be explored via the help flag.
-
-```
-$ caelestia -h
-usage: caelestia [-h] [-v] COMMAND ...
-
-Main control script for the Caelestia dotfiles
-
-options:
-  -h, --help     show this help message and exit
-  -v, --version  print the current version
-
-subcommands:
-  valid subcommands
-
-  COMMAND        the subcommand to run
-    shell        start or message the shell
-    toggle       toggle a special workspace
-    scheme       manage the colour scheme
-    search       search using a screen region
-    screenshot   take a screenshot
-    record       start a screen recording
-    clipboard    open clipboard history
-    emoji        emoji/glyph utilities
-    wallpaper    manage the wallpaper
-    resizer      window resizer daemon
-    install      install the Caelestia dotfiles
-    update       update the Caelestia dotfiles
-```
-
-### User templates
-
-Custom user templates can be defined in `~/.config/caelestia/templates/`.
-
-#### Template syntax
-
-`{{ <color>.<format> }}`
-
-- `<color>` is a theme color role derived from the Material You color system (e.g. `primary`, `secondary`, `background`)
-- `<format>` is the output format: `hex`, `rgb`, `hsl`, or a single channel (`red`, `green`, `blue`, `hue`, `saturation`, `lightness`)
-
-#### Examples
-
-- `{{ primary.hex }}` outputs `3f4ba2`
-- `{{ primary.rgb }}` outputs `rgb(193, 132, 207)`
-- `{{ primary.red }}` outputs `193`
-- `{{ primary.hsl }}` outputs `hsl(268,41%,66%)`
-- `{{ primary.hue }}` outputs `268`
-
-Output files are written to `~/.local/state/caelestia/theme/`. You can symlink them to your desired locations.
-
-## Configuring
-
-All configuration options are in `~/.config/caelestia/cli.json`.
-
-<details><summary>Example configuration</summary>
-
-```json
-{
-    "screenshot": {
-        "app": "swappy",
-        "action": "edit",
-        "regionAction": "edit",
-        "fullscreenAction": "notify",
-        "copyOnSave": true
-    },
-    "record": {
-        "refreshRate": 60,
-        "extraArgs": []
-    },
-    "wallpaper": {
-        "postHook": "echo $WALLPAPER_PATH $SCHEME_NAME $SCHEME_FLAVOUR $SCHEME_MODE $SCHEME_VARIANT $SCHEME_COLOURS"
-    },
-    "theme": {
-        "enableTerm": true,
-        "enableHypr": true,
-        "enableDiscord": true,
-        "enableSpicetify": true,
-        "enablePandora": true,
-        "enableFuzzel": true,
-        "enableBtop": true,
-        "enableNvtop": true,
-        "enableHtop": true,
-        "enableGtk": true,
-        "enableQt": true,
-        "enableWarp": true,
-        "enableChromium": true,
-        "enableZed": true,
-        "enableCava": true,
-        "iconTheme": "Papirus-Dark",
-        "iconThemeLight": "Papirus-Light",
-        "iconThemeDark": "Papirus-Dark",
-        "postHook": "echo $SCHEME_NAME $SCHEME_FLAVOUR $SCHEME_MODE $SCHEME_VARIANT $SCHEME_COLOURS"
-    },
-    "toggles": {
-        "communication": {
-            "discord": {
-                "enable": true,
-                "match": [{ "class": "discord" }],
-                "command": ["discord"],
-                "move": true
-            },
-            "whatsapp": {
-                "enable": true,
-                "match": [{ "class": "whatsapp" }],
-                "move": true
-            }
-        },
-        "music": {
-            "spotify": {
-                "enable": true,
-                "match": [{ "class": "Spotify" }, { "initialTitle": "Spotify" }, { "initialTitle": "Spotify Free" }],
-                "command": ["spicetify", "watch", "-s"],
-                "move": true
-            },
-            "feishin": {
-                "enable": true,
-                "match": [{ "class": "feishin" }],
-                "move": true
-            }
-        },
-        "sysmon": {
-            "btop": {
-                "enable": true,
-                "match": [{ "class": "btop", "title": "btop", "workspace": { "name": "special:sysmon" } }],
-                "command": ["foot", "-a", "btop", "-T", "btop", "fish", "-C", "exec btop"]
-            }
-        },
-        "todo": {
-            "todoist": {
-                "enable": true,
-                "match": [{ "class": "Todoist" }],
-                "command": ["todoist"],
-                "move": true
-            }
-        }
-    },
-    "dots": {
-        "url": "https://github.com/caelestia-dots/caelestia.git",
-        "branch": "main"
-    }
-}
-```
-
-</details>
-
-- `screenshot.app` sets the application/command template to open screenshots with (e.g. `"swappy"`, `"satty --filename {}"`, `"tensaku --filename <FILENAME>"`). Can be overridden with `caelestia screenshot -a/--app <app>`.
-- `screenshot.action` sets the default screenshot action (`"edit"`, `"save"`, `"copy"`, `"notify"`). Can be overridden per invocation with flags `-s`/`--save`, `-c`/`--copy`, `-e`/`--edit`, `-n`/`--notify`, or `--action <action>`.
-- `screenshot.regionAction` sets the action specifically for region screenshots (defaults to `"edit"`).
-- `screenshot.fullscreenAction` sets the action specifically for fullscreen screenshots (defaults to `"notify"`).
-- `screenshot.copyOnSave` (boolean, default: `true`) controls whether saving a screenshot also copies it to the clipboard.
-- `record.refreshRate` sets the recording frame rate. When omitted or `null`, the focused monitor's refresh rate is used. It can also be overridden per invocation with `caelestia record --fps <rate>`.
+all settings live in `~/.config/caelestia/cli.json`.
