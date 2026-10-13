@@ -4,6 +4,7 @@ import sys
 from caelestia.subcommands import (
     clipboard,
     emoji,
+    hardware,
     install,
     record,
     resizer,
@@ -202,6 +203,26 @@ def parse_args() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     update_parser.set_defaults(cls=update.Command)
     update_parser.add_argument("--aur-helper", choices=AUR_HELPERS, help="the AUR helper to use")
     update_parser.add_argument("--noconfirm", action="store_true", help="use defaults for all prompts")
+
+    # Create parser for hardware opts
+    hardware_parser = command_parser.add_parser(
+        "hardware", help="manage hardware profiles, fan speeds, and refresh rate"
+    )
+    hardware_parser.set_defaults(cls=hardware.Command)
+    hardware_parser.add_argument(
+        "action",
+        nargs="?",
+        default="status",
+        choices=["status", "profile", "fan", "refresh", "turbo"],
+        help="action to perform (default: status)",
+    )
+    hardware_parser.add_argument(
+        "target",
+        nargs="?",
+        default=None,
+        help="target value or 'get' (e.g. profile name, fan mode, refresh hz)",
+    )
+    hardware_parser.add_argument("-j", "--json", action="store_true", help="output status in JSON format")
 
     return parser, parser.parse_args()
 

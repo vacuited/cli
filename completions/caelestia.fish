@@ -1,7 +1,7 @@
 set -l seen '__fish_seen_subcommand_from'
 set -l has_opt '__fish_contains_opt'
 
-set -l commands shell toggle scheme screenshot record clipboard emoji-picker wallpaper resizer install update
+set -l commands shell toggle scheme screenshot record clipboard emoji-picker wallpaper resizer install update hardware
 set -l not_seen "not $seen $commands"
 
 # Disable file completions
@@ -22,6 +22,7 @@ complete -c caelestia -n $not_seen -a 'wallpaper' -d 'Manage the wallpaper'
 complete -c caelestia -n $not_seen -a 'resizer' -d 'Window resizer'
 complete -c caelestia -n $not_seen -a 'install' -d 'Install the Caelestia dotfiles'
 complete -c caelestia -n $not_seen -a 'update' -d 'Update the Caelestia dotfiles'
+complete -c caelestia -n $not_seen -a 'hardware' -d 'Manage hardware profiles, fan speeds, and refresh rate'
 
 # Shell
 set -l commands mpris drawers wallpaper notifs
@@ -146,3 +147,18 @@ complete -c caelestia -n "$seen install" -l 'noconfirm' -d 'Use defaults for all
 # Update
 complete -c caelestia -n "$seen update" -l 'aur-helper' -d 'The AUR helper to use' -a 'yay paru' -r
 complete -c caelestia -n "$seen update" -l 'noconfirm' -d 'Use defaults for all prompts'
+
+# Hardware
+set -l hw_commands status profile fan refresh turbo
+complete -c caelestia -n "$seen hardware && not $seen $hw_commands" -a 'status' -d 'Show hardware status'
+complete -c caelestia -n "$seen hardware && not $seen $hw_commands" -a 'profile' -d 'Get or set ACPI platform profile'
+complete -c caelestia -n "$seen hardware && not $seen $hw_commands" -a 'fan' -d 'Get or set fan speed mode'
+complete -c caelestia -n "$seen hardware && not $seen $hw_commands" -a 'refresh' -d 'Get or set display refresh rate'
+
+complete -c caelestia -n "$seen hardware && $seen status" -s 'j' -l 'json' -d 'Output status in JSON format'
+complete -c caelestia -n "$seen hardware && $seen profile" -a 'quiet cool balanced performance get'
+complete -c caelestia -n "$seen hardware && $seen fan" -a 'auto max get'
+complete -c caelestia -n "$seen hardware && $seen refresh" -a '60 144 get'
+
+complete -c caelestia -n "$seen hardware && not $seen $hw_commands" -a 'turbo' -d 'Get or set Intel Turbo Boost state'
+complete -c caelestia -n "$seen hardware && $seen turbo" -a 'on off get'
