@@ -264,7 +264,9 @@ class HardwareManager:
     def get_status(self) -> dict[str, Any]:
         fan1, fan2 = self.get_fan_rpms()
         gpu_temp, gpu_power, gpu_state = self.get_gpu_temp_and_power()
+        is_supported = bool(self.find_hp_hwmon() or self.PROFILE_PATH.exists())
         return {
+            "supported": is_supported,
             "profile": self.get_profile(),
             "fanMode": self.get_fan_mode(),
             "fan1Rpm": fan1,
