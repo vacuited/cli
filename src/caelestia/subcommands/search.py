@@ -23,7 +23,7 @@ class Command:
             start_new_session=True,
         )
 
-        for _ in range(100):
+        for _ in range(1200):
             if SEARCH_DONE.exists():
                 break
             time.sleep(0.05)
@@ -32,17 +32,23 @@ class Command:
 
         SEARCH_DONE.unlink(missing_ok=True)
 
-        response = subprocess.check_output(
-            [
-                "curl", "-sSf", "--connect-timeout", "5", "--max-time", "15",
-                "-F", f"files[]=@{SEARCH_PNG}",
-                "https://uguu.se/upload",
-            ],
-            text=True,
-        )
-        url = json.loads(response).get("files", [{}])[0].get("url", "")
-        if url:
-            subprocess.Popen(
-                ["xdg-open", f"https://lens.google.com/uploadbyurl?url={url}"],
-                start_new_session=True,
+        try:
+            response = subprocess.check_output(
+                [
+                    "curl", "-sSf", "--connect-timeout", "5", "--max-time", "15",
+                    "-F", f"files[]=@{SEARCH_PNG}",
+                    "https://uguu.se/upload",
+                ],
+                text=True,
+                stderr=subprocess.DEVNULL,
             )
+            url = json.loads(response).get("files", [{}])[0].get("url", "")
+            if url:
+                subprocess.Popen(
+                    ["xdg-open", f"https://lens.google.com/uploadbyurl?url={url}"],
+                    start_new_session=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+        except Exception:
+            pass
