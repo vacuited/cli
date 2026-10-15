@@ -10,46 +10,144 @@ Backend utility and control script for [vacuited-shell](https://github.com/vacui
 
 ## Features
 
-| Feature | Description | Backend / Tools |
+| Feature | Description | Backend & Tools |
 | :--- | :--- | :--- |
-| **Material You color extraction** | Generates dynamic GTK, Qt, terminal, and browser schemes from wallpapers | `materialyoucolor-py` |
-| **Video wallpaper engine** | Frame extraction and playback support for animated backgrounds | `ffmpeg`, `mpv` |
-| **Circle to search** | Interactive screen region capture and instant web query | `slurp`, `grim`, browser |
-| **Screen capture & recording** | Screenshot editing and high-FPS screen recording | `grim`, `slurp`, `swappy`, `gpu-screen-recorder` |
-| **Shell control & IPC** | Daemon lifecycle management and workspace/panel toggle triggers | `quickshell` IPC |
-| **Papirus folder tinting** | Synchronizes Papirus directory icons with active palette | `caelestia-icons-sync.sh`, `papirus-folders` |
-| **Hardware telemetry & control** | Platform profiles, fan curves, refresh rate, and turbo boost | `hp-wmi`, `intel_pstate`, `hyprctl` |
+| **Material You Color Extraction** | Generates dynamic GTK, Qt, terminal, and browser schemes from active wallpapers | `materialyoucolor-py` |
+| **Video Wallpaper Engine** | Frame extraction and playback control for animated background loops | `ffmpeg`, `mpv` |
+| **Circle to Search** | Interactive screen region selection with instant web search queries | `slurp`, `grim`, browser |
+| **Screen Capture & Recording** | Screenshot region capture, swappy annotations, and high-FPS video recording | `grim`, `slurp`, `swappy`, `gpu-screen-recorder` |
+| **Shell Control & IPC** | Daemon lifecycle management and workspace/panel toggle triggers | `quickshell` IPC |
+| **Papirus Folder Tinting** | Synchronizes Papirus directory icons with active palette | `caelestia-icons-sync.sh`, `papirus-folders` |
+| **HP Victus Hardware Control** | Platform profiles (`quiet`, `cool`, `balanced`, `performance`), fan curves, refresh rate, and Intel Turbo Boost | `hp-wmi`, `intel_pstate`, `hyprctl` |
 
-## Usage
+<details><summary id="dependencies">External Dependencies</summary>
 
-```fish
-caelestia -h
+- [`libnotify`](https://gitlab.gnome.org/GNOME/libnotify) — desktop notifications
+- [`swappy`](https://github.com/jtheoof/swappy) — interactive screenshot editor
+- [`grim`](https://gitlab.freedesktop.org/emersion/grim) — Wayland screenshot capture
+- [`slurp`](https://github.com/emersion/slurp) — Wayland interactive region selection
+- [`wl-clipboard`](https://github.com/bugaevc/wl-clipboard) — clipboard read/write
+- [`gpu-screen-recorder`](https://git.dec05eba.com/gpu-screen-recorder/about) — hardware-accelerated screen recorder
+- [`ffmpeg`](https://ffmpeg.org/) — video frame extraction
+- [`papirus-folders`](https://github.com/PapirusDevelopmentTeam/papirus-folders) — Papirus folder tinting
+- [`materialyoucolor-py`](https://github.com/Tuhin-th/materialyoucolor-py) — Material You M3 palette extraction
+- [`cliphist`](https://github.com/sentriz/cliphist) — clipboard history manager
+- [`fuzzel`](https://codeberg.org/dnkl/fuzzel) — application and clipboard picker
+
+</details>
+
+## Installation
+
+### User Environment Installation
+
+Build the Python wheel and install into `~/.local`:
+
+```bash
+# Clean previous builds
+rm -rf dist/*.whl
+
+# Build wheel package
+python -m build --wheel
+
+# Install into ~/.local
+python -m installer --overwrite-existing --prefix ~/.local dist/*.whl
 ```
 
-### Subcommands
+### Shell Completions
 
-| Subcommand | Description | Key Flags / Args |
+For Fish shell:
+```fish
+cp completions/caelestia.fish ~/.config/fish/completions/caelestia.fish
+```
+
+For Bash or system-wide installation:
+```bash
+sudo cp completions/caelestia.fish /usr/share/fish/vendor_completions.d/caelestia.fish
+```
+
+## Permissions & Hardware Setup
+
+### Hardware Control Helper
+Hardware profile transitions (including switching out of HP Victus proprietary `cool` profile) execute via `/usr/local/bin/caelestia-hardware-helper` backed by a Polkit rule to permit zero-password execution.
+
+### Automatic Folder Tinting
+To allow automatic Papirus folder recoloring without entering a password:
+
+```bash
+echo "$USER ALL=(ALL) NOPASSWD: $(which papirus-folders)" | sudo tee /etc/sudoers.d/papirus-folders
+sudo chmod 440 /etc/sudoers.d/papirus-folders
+```
+
+## Subcommands Reference
+
+Explore all subcommands via `caelestia -h`.
+
+| Subcommand | Description | Primary Options / Flags |
 | :--- | :--- | :--- |
-| `shell` | Start, stop, reload, or inspect Quickshell daemon | `-d`, `-r`, `-k` |
-| `toggle` | Toggle special workspaces and side panels | `<panel>` |
+| `shell` | Start, stop, reload, or send messages to the Quickshell daemon | `-d` (detach), `-r` (restart), `-k` (kill) |
+| `toggle` | Toggle special workspaces and shell drawers | `<panel>` (`sidebar`, `dashboard`, `utilities`) |
 | `scheme` | Generate and apply dynamic color schemes | `-w <image>`, `-s <style>` |
-| `search` | Search using an interactive screen region selection | |
-| `screenshot` | Capture screen with edit, copy, or save actions | `-m <mode>` |
-| `record` | Record screen with configurable FPS and audio | `-f <fps>`, `-s` |
-| `clipboard` | Open clipboard history picker | |
+| `search` | Capture an interactive screen region and search online | |
+| `screenshot` | Capture screen with edit, copy, or save actions | `-m <mode>` (`region`, `screen`), `-e`, `-c`, `-s` |
+| `record` | Record screen with configurable FPS and audio | `-f <fps>`, `-s` (stop) |
+| `clipboard` | Open clipboard history selection menu | |
 | `emoji` | Launch emoji and glyph picker | |
-| `wallpaper` | Apply static or video wallpapers with palette extraction | `<path>` |
+| `wallpaper` | Apply static or animated wallpapers with palette extraction | `<path>`, `-r` (random) |
 | `resizer` | Run window resizer daemon | |
-| `hardware` | Inspect telemetry and switch profiles, fans, and refresh rate | `status`, `profile`, `fans`, `rate`, `boost` |
+| `hardware` | Inspect telemetry and switch profiles, fan curves, and refresh rates | `status`, `profile`, `fans`, `rate`, `boost` |
+
+## User Templates
+
+Custom theme templates can be placed in `~/.config/caelestia/templates/`.
+
+### Syntax
+
+`{{ <color>.<format> }}`
+
+- `<color>` is a theme color role derived from Material You (e.g. `primary`, `secondary`, `surface`, `background`).
+- `<format>` is the output format: `hex`, `rgb`, `hsl`, or single channels (`red`, `green`, `blue`, `hue`, `saturation`, `lightness`).
+
+Output theme files are written to `~/.local/state/caelestia/theme/`.
 
 ## Configuration
 
-All settings live in `~/.config/caelestia/cli.json`.
+All CLI settings reside in `~/.config/caelestia/cli.json`.
+
+<details><summary>Example cli.json configuration</summary>
+
+```json
+{
+    "screenshot": {
+        "app": "swappy",
+        "action": "edit",
+        "regionAction": "edit",
+        "fullscreenAction": "notify",
+        "copyOnSave": true
+    },
+    "record": {
+        "refreshRate": 144,
+        "extraArgs": []
+    },
+    "theme": {
+        "enableTerm": true,
+        "enableHypr": true,
+        "enableGtk": true,
+        "enableQt": true,
+        "iconThemeDark": "Papirus-Dark",
+        "iconThemeLight": "Papirus-Light"
+    },
+    "wallpaper": {
+        "postHook": ""
+    }
+}
+```
+
+</details>
 
 ## Credits
 
 | Project | Upstream / Source | Contribution |
 | :--- | :--- | :--- |
-| **caelestia-cli** | [caelestia-dots/cli](https://github.com/caelestia-dots/cli) | Original backend utility and subcommands |
-| **gpu-screen-recorder** | [gpu-screen-recorder](https://git.dec05eba.com/gpu-screen-recorder) | Low-overhead hardware screen capture |
-| **Papirus Icon Theme** | [PapirusDevelopmentTeam/papirus-icon-theme](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme) | Folder icon bases and folder recoloring scripts |
+| **caelestia-cli** | [caelestia-dots/cli](https://github.com/caelestia-dots/cli) | Original backend utility, IPC commands, and scheme engine |
+| **gpu-screen-recorder** | [gpu-screen-recorder](https://git.dec05eba.com/gpu-screen-recorder) | High-performance hardware video capture |
+| **Papirus Icon Theme** | [PapirusDevelopmentTeam/papirus-icon-theme](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme) | Folder icons and recoloring automation scripts |
