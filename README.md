@@ -1,35 +1,55 @@
-the control script and backend utility for [vacuited-shell](https://github.com/vacuited/shell)
+<h1 align=center>vacuited cli</h1>
+
+<div align=center>
+
+![GitHub last commit](https://img.shields.io/github/last-commit/vacuited/cli?style=for-the-badge&labelColor=101418&color=9ccbfb)&nbsp;![GitHub repo size](https://img.shields.io/github/repo-size/vacuited/cli?style=for-the-badge&labelColor=101418&color=d3bfe6)&nbsp;![GitHub license](https://img.shields.io/github/license/vacuited/cli?style=for-the-badge&labelColor=101418&color=96f1f1)
+
+backend utility and control script for [vacuited-shell](https://github.com/vacuited/shell).
+
+</div>
 
 ## features
 
-- **material you color extraction**: generates dynamic gtk, qt, terminal, and browser color schemes from wallpapers.
-- **video wallpaper support**: high-performance video wallpaper playback and frame extraction via `ffmpeg`.
-- **circle to search**: screen region search command (`caelestia search`).
-- **screen tools**: customizable screenshots (`grim` / `slurp` / `swappy`) and screen recording with custom fps (`gpu-screen-recorder`).
-- **shell control**: daemon management and ipc triggers for workspaces, sidebars, and panels (`caelestia toggle`, `caelestia shell`).
-- **papirus folder color sync**: automatic folder icon tinting via `papirus-folders`.
-- **hardware control & telemetry**: full cli backend for hp victus hardware control (`caelestia hardware`), supporting platform profiles (`quiet`, `cool`, `balanced`, `performance`), fan boost (`auto`, `max`), display refresh rate (`60`, `144`), intel turbo boost (`on`, `off`), and json telemetry. tailored for the hp victus 15; unsupported systems safely no-op without writing invalid states.
+| feature | description | backend / tools |
+| :--- | :--- | :--- |
+| **material you color extraction** | generates dynamic gtk, qt, terminal, and browser schemes from wallpapers | `materialyoucolor-py` |
+| **video wallpaper engine** | frame extraction and playback support for animated backgrounds | `ffmpeg`, `mpv` |
+| **circle to search** | interactive screen region capture and instant web query | `slurp`, `grim`, browser |
+| **screen capture & recording** | screenshot editing and high-fps screen recording | `grim`, `slurp`, `swappy`, `gpu-screen-recorder` |
+| **shell control & ipc** | daemon lifecycle management and workspace/panel toggle triggers | `quickshell` ipc |
+| **papirus folder tinting** | synchronizes papirus directory icons with active palette | `caelestia-icons-sync.sh`, `papirus-folders` |
+| **hardware telemetry & control** | platform profiles, fan curves, refresh rate, and turbo boost | `hp-wmi`, `intel_pstate`, `hyprctl` |
 
 ## usage
 
-```sh
+```fish
 caelestia -h
 ```
 
 ### subcommands
 
-- `shell`: start, restart, or message the quickshell daemon
-- `toggle`: toggle special workspaces and panels
-- `scheme`: generate and apply color schemes
-- `search`: search using an interactive screen region
-- `screenshot`: capture screen with edit, copy, or save actions
-- `record`: screen recording daemon with configurable frame rates
-- `clipboard`: open clipboard history
-- `emoji`: emoji and glyph picker
-- `wallpaper`: set static or video wallpapers with palette extraction
-- `resizer`: window resizer daemon
-- `hardware`: inspect telemetry or control platform profiles, fans, refresh rate, and turbo boost
+| subcommand | description | key flags / args |
+| :--- | :--- | :--- |
+| `shell` | start, stop, reload, or inspect quickshell daemon | `-d`, `-r`, `-k` |
+| `toggle` | toggle special workspaces and side panels | `<panel>` |
+| `scheme` | generate and apply dynamic color schemes | `-w <image>`, `-s <style>` |
+| `search` | search using an interactive screen region selection | |
+| `screenshot` | capture screen with edit, copy, or save actions | `-m <mode>` |
+| `record` | record screen with configurable fps and audio | `-f <fps>`, `-s` |
+| `clipboard` | open clipboard history picker | |
+| `emoji` | launch emoji and glyph picker | |
+| `wallpaper` | apply static or video wallpapers with palette extraction | `<path>` |
+| `resizer` | run window resizer daemon | |
+| `hardware` | inspect telemetry and switch profiles, fans, and refresh rate | `status`, `profile`, `fans`, `rate`, `boost` |
 
 ## configuration
 
 all settings live in `~/.config/caelestia/cli.json`.
+
+## credits
+
+| project | upstream / source | contribution |
+| :--- | :--- | :--- |
+| **caelestia-cli** | [caelestia-dots/cli](https://github.com/caelestia-dots/cli) | original backend utility and subcommands |
+| **gpu-screen-recorder** | [gpu-screen-recorder](https://git.dec05eba.com/gpu-screen-recorder) | low-overhead hardware screen capture |
+| **papirus icon theme** | [PapirusDevelopmentTeam/papirus-icon-theme](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme) | folder icon bases and folder recoloring scripts |
