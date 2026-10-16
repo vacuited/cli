@@ -150,6 +150,14 @@ def apply_hypr(conf: str) -> None:
 
 
 @log_exception
+def apply_hyprtoolkit(colours: dict[str, str], mode: str, icon_theme: str | None = None) -> None:
+    template = gen_replace(colours, templates_dir / "hyprtoolkit.conf", hash=False)
+    resolved_icon_theme = icon_theme if icon_theme is not None else f"Papirus-{mode.capitalize()}"
+    template = template.replace("icon_theme = Papirus-Dark", f"icon_theme = {resolved_icon_theme}")
+    atomic_write(config_dir / "hypr/hyprtoolkit.conf", template)
+
+
+@log_exception
 def apply_discord(scss: str) -> None:
     with tempfile.TemporaryDirectory("w") as tmp_dir:
         (Path(tmp_dir) / "_colours.scss").write_text(scss)
@@ -422,10 +430,13 @@ def apply_colours(colours: dict[str, str], mode: str) -> None:
             def check(key: str) -> bool:
                 return cfg[key] if key in cfg else True
 
+            icon_theme = cfg.get(f"iconTheme{mode.capitalize()}") or cfg.get("iconTheme")
+
             if check("enableTerm"):
                 apply_terms(gen_sequences(colours))
             if check("enableHypr"):
                 apply_hypr(gen_lua(colours) if is_lua_config() else gen_conf(colours))
+                apply_hyprtoolkit(colours, mode, icon_theme)
             if check("enableDiscord"):
                 apply_discord(gen_scss(colours))
             if check("enableSpicetify"):
@@ -440,7 +451,6 @@ def apply_colours(colours: dict[str, str], mode: str) -> None:
                 apply_nvtop(colours)
             if check("enableHtop"):
                 apply_htop(colours)
-            icon_theme = cfg.get(f"iconTheme{mode.capitalize()}") or cfg.get("iconTheme")
             if check("enableGtk"):
                 apply_gtk(colours, mode, icon_theme)
             if check("enableQt"):
