@@ -403,6 +403,21 @@ def apply_cava(colours: dict[str, str]) -> None:
 
 
 @log_exception
+def apply_limusic(colours: dict[str, str], mode: str) -> None:
+    limusic_config = config_dir / "limusic"
+    if not (
+        shutil.which("limusic-app")
+        or shutil.which("limusic")
+        or limusic_config.exists()
+        or (data_dir / "com.limusic.desktop").exists()
+    ):
+        return
+
+    content = gen_replace_dynamic(colours, templates_dir / "limusic.css", mode)
+    atomic_write(limusic_config / "matugen.css", content)
+
+
+@log_exception
 def apply_user_templates(colours: dict[str, str], mode: str) -> None:
     if not user_templates_dir.is_dir():
         return
@@ -463,6 +478,8 @@ def apply_colours(colours: dict[str, str], mode: str) -> None:
                 apply_zed(colours, mode)
             if check("enableCava"):
                 apply_cava(colours)
+            if check("enableLimusic"):
+                apply_limusic(colours, mode)
             apply_user_templates(colours, mode)
 
             if post_hook := cfg.get("postHook"):

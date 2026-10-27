@@ -18,6 +18,7 @@ Backend utility and control script for [vacuited-shell](https://github.com/vacui
 | **Screen Capture & Recording** | Screenshot region capture, swappy annotations, and high-FPS video recording | `grim`, `slurp`, `swappy`, `gpu-screen-recorder` |
 | **Shell Control & IPC** | Daemon lifecycle management and workspace/panel toggle triggers | `quickshell` IPC |
 | **Papirus Folder Tinting** | Synchronizes Papirus directory icons with active palette | `caelestia-icons-sync.sh`, `papirus-folders` |
+| **Limusic Dynamic Palette** | Live Material 3 theming for Limusic (YouTube Music client) | `~/.config/limusic/matugen.css` |
 | **HP Victus Hardware Control** | Platform profiles (`quiet`, `cool`, `balanced`, `performance`), fan curves, refresh rate, and Intel Turbo Boost | `hp-wmi`, `intel_pstate`, `hyprctl` |
 
 <details><summary id="dependencies">External Dependencies</summary>

@@ -1,0 +1,92 @@
+/*
+ * Limusic (YouTube Music) Material 3 palette template
+ */
+
+html.matugen-theme {
+	--background: #{{ background.hex }};
+	--foreground: #{{ onBackground.hex }};
+
+	--card: #{{ surfaceContainer.hex }};
+	--card-foreground: #{{ onSurface.hex }};
+
+	--popover: #{{ surfaceContainerHigh.hex }};
+	--popover-foreground: #{{ onSurface.hex }};
+
+	/* Accent quartet */
+	--primary: #{{ primary.hex }};
+	--primary-foreground: #{{ onPrimary.hex }};
+	--accent: #{{ primary.hex }};
+	--accent-foreground: #{{ onPrimary.hex }};
+
+	--secondary: #{{ secondaryContainer.hex }};
+	--secondary-foreground: #{{ onSecondaryContainer.hex }};
+
+	--muted: #{{ surfaceContainerLow.hex }};
+	--muted-foreground: #{{ onSurfaceVariant.hex }};
+
+	--destructive: #{{ error.hex }};
+	--destructive-foreground: #{{ onError.hex }};
+
+	--border: #{{ outlineVariant.hex }};
+	--input: #{{ outlineVariant.hex }};
+	--ring: #{{ primary.hex }};
+
+	--chart-1: #{{ primary.hex }};
+	--chart-2: #{{ secondary.hex }};
+	--chart-3: #{{ tertiary.hex }};
+	--chart-4: #{{ error.hex }};
+	--chart-5: #{{ outline.hex }};
+
+	--sidebar: #{{ surface.hex }};
+	--sidebar-foreground: #{{ onSurface.hex }};
+	--sidebar-primary: #{{ primary.hex }};
+	--sidebar-primary-foreground: #{{ onPrimary.hex }};
+	--sidebar-accent: #{{ secondaryContainer.hex }};
+	--sidebar-accent-foreground: #{{ onSecondaryContainer.hex }};
+	--sidebar-border: #{{ outlineVariant.hex }};
+	--sidebar-ring: #{{ primary.hex }};
+}
+
+html.matugen-theme.dark {
+	--background: #{{ background.hex }};
+	--foreground: #{{ onBackground.hex }};
+
+	--card: #{{ surfaceContainer.hex }};
+	--card-foreground: #{{ onSurface.hex }};
+
+	--popover: #{{ surfaceContainerHigh.hex }};
+	--popover-foreground: #{{ onSurface.hex }};
+
+	--primary: #{{ primary.hex }};
+	--primary-foreground: #{{ onPrimary.hex }};
+	--accent: #{{ primary.hex }};
+	--accent-foreground: #{{ onPrimary.hex }};
+
+	--secondary: #{{ secondaryContainer.hex }};
+	--secondary-foreground: #{{ onSecondaryContainer.hex }};
+
+	--muted: #{{ surfaceContainerLow.hex }};
+	--muted-foreground: #{{ onSurfaceVariant.hex }};
+
+	--destructive: #{{ error.hex }};
+	--destructive-foreground: #{{ onError.hex }};
+
+	--border: #{{ outlineVariant.hex }};
+	--input: #{{ outlineVariant.hex }};
+	--ring: #{{ primary.hex }};
+
+	--chart-1: #{{ primary.hex }};
+	--chart-2: #{{ secondary.hex }};
+	--chart-3: #{{ tertiary.hex }};
+	--chart-4: #{{ error.hex }};
+	--chart-5: #{{ outline.hex }};
+
+	--sidebar: #{{ surface.hex }};
+	--sidebar-foreground: #{{ onSurface.hex }};
+	--sidebar-primary: #{{ primary.hex }};
+	--sidebar-primary-foreground: #{{ onPrimary.hex }};
+	--sidebar-accent: #{{ secondaryContainer.hex }};
+	--sidebar-accent-foreground: #{{ onSecondaryContainer.hex }};
+	--sidebar-border: #{{ outlineVariant.hex }};
+	--sidebar-ring: #{{ primary.hex }};
+}
