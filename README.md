@@ -39,6 +39,16 @@ Backend utility and control script for [vacuited-shell](https://github.com/vacui
 
 ## Installation
 
+### Quick Install
+
+```bash
+git clone https://github.com/vacuited/cli.git
+cd cli
+./install.sh
+```
+
+Checks dependencies (installs missing ones on Arch-based distros), builds the wheel, installs to `~/.local`, and sets up fish completions. Options: `--yes`, `--skip-deps`, `--dry-run`.
+
 ### User Environment Installation
 
 Build the Python wheel and install into `~/.local`:
