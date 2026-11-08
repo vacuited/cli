@@ -221,11 +221,16 @@ else
     verify_prereqs || die "Fix the missing prerequisites and re-run."
 fi
 
-# Warn about conflicting distro packages (they own /usr/bin/caelestia)
+# Handle conflicting distro packages (they own /usr/bin/caelestia and shadow ~/.local/bin/caelestia)
 if [ "$IS_ARCH" -eq 1 ]; then
     for pkg in caelestia-cli caelestia-cli-git; do
         if pacman -Qq "$pkg" >/dev/null 2>&1; then
-            warn "Package '$pkg' is installed and may shadow this build. Remove it with: sudo pacman -Rdd $pkg"
+            warn "System package '$pkg' is installed (/usr/bin/caelestia) and conflicts with vacuited-cli."
+            if confirm "Remove conflicting package '$pkg' now?" y; then
+                run $SUDO pacman -Rdd "${YES_FLAG[@]}" "$pkg"
+            else
+                warn "Keeping '$pkg'. Ensure $PREFIX/bin precedes /usr/bin in your PATH."
+            fi
         fi
     done
 fi
@@ -290,6 +295,41 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# PATH & Initial State
+# ---------------------------------------------------------------------------
+
+ensure_local_bin_in_path() {
+    case ":$PATH:" in
+        *":$PREFIX/bin:"*) ;;
+        *) export PATH="$PREFIX/bin:$PATH" ;;
+    esac
+
+    if command -v fish >/dev/null 2>&1; then
+        run fish -c "contains -- '$PREFIX/bin' \$fish_user_paths; or fish_add_path -g '$PREFIX/bin'" 2>/dev/null || true
+    fi
+
+    local rc
+    for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        if [ -f "$rc" ] && ! grep -qF '.local/bin' "$rc" 2>/dev/null; then
+            if [ "$DRY_RUN" -eq 1 ]; then
+                info "[dry-run] would append PATH export to $rc"
+            else
+                printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$rc"
+                info "Added ~/.local/bin to PATH in $(basename "$rc")"
+            fi
+        fi
+    done
+}
+
+ensure_local_bin_in_path
+
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+if [ "$DRY_RUN" -eq 0 ] && [ ! -f "$STATE_HOME/caelestia/scheme.json" ]; then
+    info "Initializing default Caelestia color scheme..."
+    "$PREFIX/bin/caelestia" scheme set -n catppuccin -m dark >/dev/null 2>&1 || true
+fi
+
+# ---------------------------------------------------------------------------
 # Verify
 # ---------------------------------------------------------------------------
 
@@ -299,10 +339,7 @@ if [ "$DRY_RUN" -eq 0 ]; then
     log "Installed: $("$PREFIX/bin/caelestia" -v 2>&1 | head -n1)"
     resolved="$(command -v caelestia || true)"
     if [ "$resolved" != "$PREFIX/bin/caelestia" ]; then
-        case ":$PATH:" in
-            *":$PREFIX/bin:"*) warn "'caelestia' resolves to ${resolved:-nothing}, not $PREFIX/bin/caelestia. Check your PATH order." ;;
-            *) warn "Add $PREFIX/bin to your PATH:  fish_add_path ~/.local/bin  (fish)  |  export PATH=\"\$HOME/.local/bin:\$PATH\"  (bash/zsh)" ;;
-        esac
+        warn "'caelestia' resolves to ${resolved:-nothing} instead of $PREFIX/bin/caelestia. Check your PATH order."
     fi
 fi
 

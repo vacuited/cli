@@ -25,6 +25,13 @@ class HardwareManager:
                 return entry
         return None
 
+    def _require_helper(self) -> Path:
+        if self.HELPER_PATH.exists():
+            return self.HELPER_PATH
+        raise FileNotFoundError(
+            f"Hardware helper not found at {self.HELPER_PATH}. Re-run shell/install.sh --hardware."
+        )
+
     def get_profile_choices(self) -> list[str]:
         if self.PROFILE_CHOICES_PATH.exists():
             try:
@@ -67,7 +74,7 @@ class HardwareManager:
         except (PermissionError, OSError):
             pass
 
-        helper = self.HELPER_PATH if self.HELPER_PATH.exists() else Path.home() / "retroistickx/projects/vacuited-shell/scripts/caelestia-hardware-helper"
+        helper = self._require_helper()
         cmd = ["pkexec", str(helper), "set-profile", profile]
         res = subprocess.run(cmd)
         if res.returncode != 0:
@@ -110,7 +117,7 @@ class HardwareManager:
         except (PermissionError, OSError):
             pass
 
-        helper = self.HELPER_PATH if self.HELPER_PATH.exists() else Path.home() / "retroistickx/projects/vacuited-shell/scripts/caelestia-hardware-helper"
+        helper = self._require_helper()
         cmd = ["pkexec", str(helper), "set-fan", mode]
         res = subprocess.run(cmd)
         if res.returncode != 0:
@@ -255,7 +262,7 @@ class HardwareManager:
         except (PermissionError, OSError):
             pass
 
-        helper = self.HELPER_PATH if self.HELPER_PATH.exists() else Path.home() / "retroistickx/projects/vacuited-shell/scripts/caelestia-hardware-helper"
+        helper = self._require_helper()
         cmd = ["pkexec", str(helper), "set-turbo", "on" if enabled else "off"]
         res = subprocess.run(cmd)
         if res.returncode != 0:
@@ -264,7 +271,7 @@ class HardwareManager:
     def get_status(self) -> dict[str, Any]:
         fan1, fan2 = self.get_fan_rpms()
         gpu_temp, gpu_power, gpu_state = self.get_gpu_temp_and_power()
-        is_supported = bool(self.find_hp_hwmon() or self.PROFILE_PATH.exists())
+        is_supported = self.find_hp_hwmon() is not None
         return {
             "supported": is_supported,
             "profile": self.get_profile(),
