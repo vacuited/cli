@@ -299,7 +299,7 @@ def _update_shell_with_pkgit(installer: PackageInstaller, noconfirm: bool) -> No
         info("  yay -S pkgit-git")
         return
 
-    cmd = ["pkgit", "-qfi" if noconfirm else "-fi", "https://github.com/dim-ghub/caelestia-shell"]
+    cmd = ["pkgit", "-qfi" if noconfirm else "-fi", "https://github.com/vacuited/shell"]
     try:
         subprocess.run(cmd, check=True)
         info("Caelestia Shell updated successfully via pkgit")

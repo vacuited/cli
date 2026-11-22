@@ -6,7 +6,7 @@ title: "[BUG] "
 body:
     - type: markdown
       attributes:
-          value: "**Welcome to submit a new issue!**\n- It takes only 3 steps, so please be patient :)\n- Tip: If your issue is not a feature request and is not an issue with the dots (e.g. \"how do I use X feature\"), please use [Discussions](https://github.com/caelestia-dots/shell/discussions) instead."
+          value: "**Welcome to submit a new issue!**\n- It takes only 3 steps, so please be patient :)\n- Tip: If your issue is not a feature request, please check [vacuited/cli](https://github.com/vacuited/cli) or [vacuited/shell](https://github.com/vacuited/shell) first."
     - type: checkboxes
       attributes:
           label: "Step 1. Before you submit"
@@ -14,7 +14,7 @@ body:
           options:
               - label: I have read the above instructions and am sure that this is supposed to be posted here.
                 required: true
-              - label: I've successfully updated to the latest versions following the [updating guide](https://github.com/caelestia-dots/caelestia?tab=readme-ov-file#updating).
+              - label: I've successfully updated to the latest versions following the [install guide](https://github.com/vacuited/cli#installation).
                 required: false # Not required cuz user may have failed to do so
               - label: I've successfully updated the system packages to the latest.
                 required: false # Not required cuz user may have failed to do so

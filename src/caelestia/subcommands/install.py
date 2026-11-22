@@ -84,7 +84,7 @@ def _install_shell_with_pkgit(installer: PackageInstaller, noconfirm: bool) -> N
         info("  yay -S pkgit-git")
         return
 
-    cmd = ["pkgit", "-qi" if noconfirm else "-i", "https://github.com/dim-ghub/caelestia-shell"]
+    cmd = ["pkgit", "-qi" if noconfirm else "-i", "https://github.com/vacuited/shell"]
     try:
         subprocess.run(cmd, check=True)
         info("Caelestia Shell installed successfully via pkgit")

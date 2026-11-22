@@ -545,6 +545,54 @@ if [ "$DRY_RUN" -eq 0 ]; then
     if [ "$resolved" != "$PREFIX/bin/caelestia" ]; then
         warn "'caelestia' resolves to ${resolved:-nothing} instead of $PREFIX/bin/caelestia. Check your PATH order."
     fi
+
+    cli_git_rev=""
+    if command -v git >/dev/null 2>&1; then
+        cli_git_top="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+        [ -n "$cli_git_top" ] && cli_git_top="$(readlink -f "$cli_git_top" 2>/dev/null || printf '%s' "$cli_git_top")"
+        if [ "$cli_git_top" = "$SCRIPT_DIR" ]; then
+            cli_git_rev="$(git -C "$SCRIPT_DIR" rev-parse HEAD 2>/dev/null || true)"
+        fi
+    fi
+    if [ -n "$cli_git_rev" ] && [ -n "${PYTHON_BIN:-}" ]; then
+        "$PYTHON_BIN" - "$STATE_HOME/vacuited" "$cli_git_rev" "$CLI_VERSION" <<'EOF' >/dev/null 2>&1 || true
+import fcntl, json, os, sys, tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+state_dir = Path(sys.argv[1])
+commit, version, stamp = sys.argv[2], sys.argv[3], datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
+meta_path = state_dir / "install-meta.json"
+lock_path = state_dir / ".meta.lock"
+state_dir.mkdir(parents=True, exist_ok=True)
+with lock_path.open("w", encoding="utf-8") as lock_fh:
+    fcntl.flock(lock_fh, fcntl.LOCK_EX)
+    try:
+        try:
+            data = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        data.setdefault("schema", 1)
+        data.setdefault("shell", {"commit": "", "pluginCommit": "", "version": "", "installedAt": ""})
+        cli = data.get("cli") if isinstance(data.get("cli"), dict) else {}
+        cli["commit"] = commit
+        if version and version != "unknown":
+            cli["version"] = version
+        cli["installedAt"] = stamp
+        data["cli"] = cli
+        data.setdefault("lastCheckedAt", "")
+        data.setdefault("justUpdated", None)
+        fd, tmp = tempfile.mkstemp(prefix=".install-meta.json.", dir=str(state_dir))
+        with os.fdopen(fd, "w", encoding="utf-8") as out:
+            json.dump(data, out, indent=2)
+            out.write("\n")
+        os.replace(tmp, meta_path)
+    finally:
+        fcntl.flock(lock_fh, fcntl.LOCK_UN)
+EOF
+    fi
 fi
 
 if command -v systemctl >/dev/null 2>&1; then

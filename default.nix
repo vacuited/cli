@@ -81,7 +81,7 @@ python3.pkgs.buildPythonApplication {
 
   meta = {
     description = "The main control script for the Caelestia dotfiles";
-    homepage = "https://github.com/caelestia-dots/cli";
+    homepage = "https://github.com/vacuited/cli";
     license = lib.licenses.gpl3Only;
     mainProgram = "caelestia";
     platforms = lib.platforms.linux;

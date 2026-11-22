@@ -3,8 +3,8 @@ from pathlib import Path
 from caelestia.utils.dots.packages import PackageInstaller
 
 # AUR package names
-CLI_PKG_NAMES = ("midnight-cli-git",)
-SHELL_PKG_NAMES = ("midnight-shell-git",)
+CLI_PKG_NAMES = ("vacuited-cli-git", "vacuited-cli")
+SHELL_PKG_NAMES = ("vacuited-shell-git", "vacuited-shell")
 
 
 def detect_shell_management_source(installer: PackageInstaller) -> str | None:
@@ -23,8 +23,9 @@ def detect_shell_management_source(installer: PackageInstaller) -> str | None:
     if any(installer.is_installed(name) for name in CLI_PKG_NAMES):
         return "cli"
 
-    marker = Path.home() / ".local" / "state" / "caelestia" / "shell-managed"
-    if marker.exists():
+    caelestia_marker = Path.home() / ".local" / "state" / "caelestia" / "shell-managed"
+    vacuited_marker = Path.home() / ".local" / "state" / "vacuited" / "install-meta.json"
+    if caelestia_marker.exists() or vacuited_marker.exists():
         return "manual"
 
     return None
