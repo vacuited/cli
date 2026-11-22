@@ -47,7 +47,7 @@ cd cli
 ./install.sh
 ```
 
-Checks dependencies (installs missing ones on Arch-based distros), builds the wheel, installs to `~/.local`, and sets up fish completions. Options: `--yes`, `--skip-deps`, `--dry-run`.
+Checks dependencies (installs missing ones on Arch-based distros), builds the wheel, installs to `~/.local`, and sets up fish completions. Options: `-y`/`--yes`, `--skip-deps`, `--with-optional`, `--prefix <dir>`, `--python <bin>`, `--no-path`, `--uninstall`, `--dry-run`.
 
 ### User Environment Installation
 
