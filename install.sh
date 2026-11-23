@@ -229,6 +229,16 @@ do_uninstall() {
         run rm -f "$CONFIG_HOME/fish/completions/caelestia.fish"
     fi
 
+    if [ -f "$CONFIG_HOME/environment.d/10-vacuited-path.conf" ] && grep -qF '# Managed by vacuited-cli' "$CONFIG_HOME/environment.d/10-vacuited-path.conf" 2>/dev/null; then
+        info "Removing $CONFIG_HOME/environment.d/10-vacuited-path.conf"
+        run rm -f "$CONFIG_HOME/environment.d/10-vacuited-path.conf"
+    fi
+
+    if [ -f /usr/local/bin/caelestia ] && grep -qF '# vacuited-cli-shim' /usr/local/bin/caelestia 2>/dev/null && [ -n "$SUDO" ]; then
+        info "Removing /usr/local/bin/caelestia shim (privileged)"
+        run_priv rm -f /usr/local/bin/caelestia
+    fi
+
     log "vacuited-cli uninstalled."
     exit 0
 }
@@ -487,6 +497,14 @@ fi
 # PATH & Initial State
 # ---------------------------------------------------------------------------
 
+profile_has_bin() {
+    local f="$1"
+    [ -f "$f" ] || return 1
+    grep -qF "$PREFIX/bin" "$f" 2>/dev/null && return 0
+    [ "$PREFIX" = "$HOME/.local" ] && grep -qF '.local/bin' "$f" 2>/dev/null && return 0
+    return 1
+}
+
 ensure_local_bin_in_path() {
     case ":$PATH:" in
         *":$PREFIX/bin:"*) ;;
@@ -499,25 +517,111 @@ ensure_local_bin_in_path() {
         run fish -c 'contains -- $argv[1] $fish_user_paths; or fish_add_path -U -- $argv[1]' -- "$PREFIX/bin" 2>/dev/null || true
     fi
 
-    local rc
-    for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
-        [ -f "$rc" ] || continue
-        if grep -qF "$PREFIX/bin" "$rc" 2>/dev/null; then
-            continue
-        fi
-        if [ "$PREFIX" = "$HOME/.local" ] && grep -qF '.local/bin' "$rc" 2>/dev/null; then
-            continue
-        fi
+    local bin_dir="${PREFIX%/}/bin"
+    local env_dir="$CONFIG_HOME/environment.d"
+    local env_file="$env_dir/10-vacuited-path.conf"
+    local env_content="# Managed by vacuited-cli install.sh"$'\n'"PATH=${bin_dir}:\$PATH"
+    local existing_env=""
+    [ -f "$env_file" ] && existing_env="$(cat "$env_file" 2>/dev/null || true)"
+    if [ "$existing_env" != "$env_content" ]; then
         if [ "$DRY_RUN" -eq 1 ]; then
-            info "[dry-run] would offer to append PATH export ($PREFIX/bin) to $rc"
-        elif confirm "Add $PREFIX/bin to PATH in $(basename "$rc")?" n; then
-            printf '\nexport PATH="%s/bin:$PATH"\n' "$PREFIX" >> "$rc"
-            info "Added $PREFIX/bin to PATH in $(basename "$rc")"
+            info "[dry-run] would write $env_file (PATH=$bin_dir:\$PATH)"
+        else
+            mkdir -p "$env_dir"
+            local tmp_env
+            tmp_env="$(mktemp "${env_dir}/.10-vacuited-path.conf.XXXXXX")"
+            printf '%s\n' "$env_content" > "$tmp_env"
+            mv -f "$tmp_env" "$env_file"
+            info "Configured systemd user environment PATH in $env_file"
+        fi
+    fi
+
+    local candidates=() missing_profiles=() profile_names=() pf
+    if [ -f "$HOME/.profile" ] || [ ! -f "$HOME/.bash_profile" ]; then
+        candidates+=("$HOME/.profile")
+    fi
+    [ -f "$HOME/.bash_profile" ] && candidates+=("$HOME/.bash_profile")
+    if command -v zsh >/dev/null 2>&1 || [ -f "$HOME/.zshrc" ] || [ -f "$HOME/.zprofile" ]; then
+        candidates+=("$HOME/.zprofile")
+    fi
+    [ -f "$HOME/.bashrc" ] && candidates+=("$HOME/.bashrc")
+    [ -f "$HOME/.zshrc" ] && candidates+=("$HOME/.zshrc")
+
+    for pf in "${candidates[@]}"; do
+        if ! profile_has_bin "$pf"; then
+            missing_profiles+=("$pf")
+            profile_names+=("$(basename "$pf")")
         fi
     done
+
+    if [ ${#missing_profiles[@]} -gt 0 ]; then
+        local path_expr
+        if [ "$PREFIX" = "$HOME/.local" ]; then
+            path_expr='$HOME/.local/bin'
+        else
+            path_expr="$bin_dir"
+        fi
+        if [ "$DRY_RUN" -eq 1 ]; then
+            info "[dry-run] would offer to add $PREFIX/bin to PATH in: ${missing_profiles[*]}"
+        elif confirm "Add $PREFIX/bin to PATH in login/shell profiles (${profile_names[*]}) so Hyprland autostart finds 'caelestia' on boot?" y; then
+            for pf in "${missing_profiles[@]}"; do
+                printf '\n# Added by vacuited-cli install.sh\ncase ":$PATH:" in\n    *:"%s":*) ;;\n    *) export PATH="%s:$PATH" ;;\nesac\n' "$path_expr" "$path_expr" >> "$pf"
+                info "Added $PREFIX/bin to PATH in $(basename "$pf")"
+            done
+        fi
+    fi
+}
+
+install_system_shim() {
+    [ "$NO_PATH" -eq 0 ] || return 0
+    [ "$PREFIX" = "$HOME/.local" ] || return 0
+    [ -n "$SUDO" ] || return 0
+
+    local shim_path="/usr/local/bin/caelestia"
+    local shim_marker="# vacuited-cli-shim"
+    if [ -e "$shim_path" ] || [ -L "$shim_path" ]; then
+        if [ ! -f "$shim_path" ] || ! grep -qF "$shim_marker" "$shim_path" 2>/dev/null; then
+            return 0
+        fi
+    fi
+
+    local tmp_shim
+    tmp_shim="$(mktemp)"
+    CLEANUP_PATHS+=("$tmp_shim")
+    cat <<'EOF' > "$tmp_shim"
+#!/bin/sh
+# vacuited-cli-shim — dispatches to the invoking user's vacuited-cli install
+case ":${PATH:-}:" in
+    *:"${HOME}/.local/bin":*) ;;
+    *) export PATH="${HOME}/.local/bin${PATH:+:${PATH}}" ;;
+esac
+if [ -x "${HOME}/.local/bin/caelestia" ]; then
+    exec "${HOME}/.local/bin/caelestia" "$@"
+fi
+printf '%s\n' "caelestia: not installed for ${USER:-user} (${HOME}/.local/bin/caelestia missing)" >&2
+exit 127
+EOF
+
+    if [ -f "$shim_path" ] && cmp -s "$tmp_shim" "$shim_path" 2>/dev/null; then
+        return 0
+    fi
+
+    if [ "$DRY_RUN" -eq 0 ] && ! (: </dev/tty) 2>/dev/null && ! "$SUDO" -n true 2>/dev/null; then
+        return 0
+    fi
+
+    if confirm "Install /usr/local/bin/caelestia shim so display managers and Hyprland always find 'caelestia' on boot?" y; then
+        if [ "$DRY_RUN" -eq 1 ]; then
+            run_priv install -Dm755 "<tmp>/caelestia" "$shim_path"
+        else
+            run_priv install -Dm755 "$tmp_shim" "$shim_path"
+            log "Installed system-wide login shim at $shim_path"
+        fi
+    fi
 }
 
 ensure_local_bin_in_path
+install_system_shim
 
 if [ ! -f "$STATE_HOME/caelestia/scheme.json" ]; then
     info "Initializing default Caelestia color scheme..."
@@ -543,7 +647,9 @@ if [ "$DRY_RUN" -eq 0 ]; then
 
     resolved="$(command -v caelestia || true)"
     if [ "$resolved" != "$PREFIX/bin/caelestia" ]; then
-        warn "'caelestia' resolves to ${resolved:-nothing} instead of $PREFIX/bin/caelestia. Check your PATH order."
+        if ! ([ "$resolved" = "/usr/local/bin/caelestia" ] && [ -f "$resolved" ] && grep -qF '# vacuited-cli-shim' "$resolved" 2>/dev/null); then
+            warn "'caelestia' resolves to ${resolved:-nothing} instead of $PREFIX/bin/caelestia. Check your PATH order."
+        fi
     fi
 
     cli_git_rev=""
