@@ -14,6 +14,7 @@ class HardwareManager:
     PROFILE_PATH = Path("/sys/firmware/acpi/platform_profile")
     PROFILE_CHOICES_PATH = Path("/sys/firmware/acpi/platform_profile_choices")
     NO_TURBO_PATH = Path("/sys/devices/system/cpu/intel_pstate/no_turbo")
+    DMI_PRODUCT_PATH = Path("/sys/class/dmi/id/product_name")
     HELPER_PATH = Path("/usr/local/bin/caelestia-hardware-helper")
 
     def find_hp_hwmon(self) -> Path | None:
@@ -24,6 +25,29 @@ class HardwareManager:
             if entry.is_dir() and (entry / "pwm1_enable").exists():
                 return entry
         return None
+
+    def is_supported(self) -> bool:
+        hwmon = self.find_hp_hwmon()
+        if hwmon is None:
+            return False
+
+        has_dual_fans = (hwmon / "fan1_input").exists() and (hwmon / "fan2_input").exists()
+        if not has_dual_fans:
+            return False
+
+        if not self.PROFILE_CHOICES_PATH.exists():
+            return False
+        choices = self.get_profile_choices()
+        if "cool" not in choices:
+            return False
+
+        product = ""
+        if self.DMI_PRODUCT_PATH.exists():
+            try:
+                product = self.DMI_PRODUCT_PATH.read_text().strip().lower()
+            except Exception:
+                pass
+        return "victus" in product or "omen" in product
 
     def _require_helper(self) -> Path:
         if self.HELPER_PATH.exists():
@@ -271,7 +295,7 @@ class HardwareManager:
     def get_status(self) -> dict[str, Any]:
         fan1, fan2 = self.get_fan_rpms()
         gpu_temp, gpu_power, gpu_state = self.get_gpu_temp_and_power()
-        is_supported = self.find_hp_hwmon() is not None
+        is_supported = self.is_supported()
         return {
             "supported": is_supported,
             "profile": self.get_profile(),

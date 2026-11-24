@@ -717,7 +717,10 @@ cat <<EOF
 Try:  caelestia -h
 EOF
 
-if compgen -G "/sys/devices/platform/hp-wmi/hwmon/hwmon*/pwm1_enable" >/dev/null && [ ! -x /usr/local/bin/caelestia-hardware-helper ]; then
-    info "HP Victus fan controller detected, but /usr/local/bin/caelestia-hardware-helper is missing."
+if compgen -G "/sys/devices/platform/hp-wmi/hwmon/hwmon*/pwm1_enable" >/dev/null \
+    && compgen -G "/sys/devices/platform/hp-wmi/hwmon/hwmon*/fan2_input" >/dev/null \
+    && grep -qiE 'victus|omen' /sys/class/dmi/id/product_name 2>/dev/null \
+    && [ ! -x /usr/local/bin/caelestia-hardware-helper ]; then
+    info "HP Victus/OMEN fan controller detected, but /usr/local/bin/caelestia-hardware-helper is missing."
     info "Run vacuited-shell's install.sh --hardware to install the helper and polkit rule."
 fi

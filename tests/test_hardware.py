@@ -1,4 +1,5 @@
 import json
+import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 from pathlib import Path
@@ -11,7 +12,8 @@ from caelestia.parser import parse_args
 class TestHardwareCommand(unittest.TestCase):
     def test_get_status_dict(self):
         hw = hardware.HardwareManager()
-        with patch.object(hw, "get_profile", return_value="performance"), \
+        with patch.object(hw, "is_supported", return_value=True), \
+             patch.object(hw, "get_profile", return_value="performance"), \
              patch.object(hw, "get_fan_mode", return_value="auto"), \
              patch.object(hw, "get_fan_rpms", return_value=(3200, 2700)), \
              patch.object(hw, "get_refresh_rate", return_value=144), \
@@ -19,6 +21,7 @@ class TestHardwareCommand(unittest.TestCase):
              patch.object(hw, "get_gpu_temp_and_power", return_value=(40, 2.65, "D3 Sleep")), \
              patch.object(hw, "get_turbo", return_value=True):
             status = hw.get_status()
+            self.assertTrue(status["supported"])
             self.assertEqual(status["profile"], "performance")
             self.assertEqual(status["fanMode"], "auto")
             self.assertEqual(status["fan1Rpm"], 3200)
@@ -29,6 +32,50 @@ class TestHardwareCommand(unittest.TestCase):
             self.assertEqual(status["gpuPower"], 2.65)
             self.assertEqual(status["gpuState"], "D3 Sleep")
             self.assertTrue(status["turbo"])
+
+    def test_is_supported_victus_omen(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            hwmon = root / "hwmon0"
+            hwmon.mkdir()
+            (hwmon / "pwm1_enable").write_text("2\n")
+            (hwmon / "fan1_input").write_text("2500\n")
+            (hwmon / "fan2_input").write_text("2400\n")
+            choices = root / "platform_profile_choices"
+            choices.write_text("cool quiet balanced performance\n")
+            product = root / "product_name"
+            product.write_text("Victus by HP Gaming Laptop 15-fa2xxx\n")
+
+            hw = hardware.HardwareManager()
+            hw.PROFILE_CHOICES_PATH = choices
+            hw.DMI_PRODUCT_PATH = product
+            with patch.object(hw, "find_hp_hwmon", return_value=hwmon):
+                self.assertTrue(hw.is_supported())
+                product.write_text("OMEN by HP Gaming Laptop 16\n")
+                self.assertTrue(hw.is_supported())
+
+    def test_is_supported_rejects_generic_hp_notebook(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            hwmon = root / "hwmon0"
+            hwmon.mkdir()
+            (hwmon / "pwm1_enable").write_text("2\n")
+            (hwmon / "fan1_input").write_text("2000\n")
+            choices = root / "platform_profile_choices"
+            choices.write_text("low-power balanced performance\n")
+            product = root / "product_name"
+            product.write_text("HP Laptop 15s-eq2xxx\n")
+
+            hw = hardware.HardwareManager()
+            hw.PROFILE_CHOICES_PATH = choices
+            hw.DMI_PRODUCT_PATH = product
+            with patch.object(hw, "find_hp_hwmon", return_value=hwmon):
+                self.assertFalse(hw.is_supported())
+
+                # Even with fan2_input + cool present, non-Victus/OMEN DMI is rejected
+                (hwmon / "fan2_input").write_text("2000\n")
+                choices.write_text("cool quiet balanced performance\n")
+                self.assertFalse(hw.is_supported())
 
     def test_set_fan_mode_validation(self):
         hw = hardware.HardwareManager()
