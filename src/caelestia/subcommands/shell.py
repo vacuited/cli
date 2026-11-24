@@ -35,16 +35,6 @@ class Command:
             # Send a message
             self.message(*self.args.message)
         else:
-            # Hardware Decoder Injection
-            try:
-                decoder_file = Path(os.path.expanduser("~/.cache/caelestia/hwDecoder.txt"))
-                if decoder_file.exists():
-                    decoder = decoder_file.read_text().strip()
-                    if decoder and decoder.lower() != "auto":
-                        os.environ["QT_FFMPEG_DECODING_HW_DEVICE_TYPES"] = decoder
-            except Exception:
-                pass
-
             # Start the shell
             self.start_shell()
 
@@ -52,6 +42,21 @@ class Command:
         return subprocess.check_output(["qs", "-c", "caelestia", *args], text=True)
 
     def start_shell(self) -> None:
+        # Hardware Decoder Injection
+        try:
+            decoder_file = Path(os.path.expanduser("~/.cache/caelestia/hwDecoder.txt"))
+            if decoder_file.exists():
+                decoder = decoder_file.read_text().strip()
+                if decoder and decoder.lower() != "auto":
+                    os.environ["QT_FFMPEG_DECODING_HW_DEVICE_TYPES"] = decoder
+        except Exception:
+            pass
+
+        os.environ.setdefault(
+            "MALLOC_CONF",
+            "narenas:4,background_thread:true,dirty_decay_ms:2000,muzzy_decay_ms:0,thp:never",
+        )
+
         args = ["qs", "-c", "caelestia", "-n"]
         if self.args.log_rules:
             args.extend(["--log-rules", self.args.log_rules])
