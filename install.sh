@@ -563,7 +563,7 @@ ensure_local_bin_in_path() {
         fi
         if [ "$DRY_RUN" -eq 1 ]; then
             info "[dry-run] would offer to add $PREFIX/bin to PATH in: ${missing_profiles[*]}"
-        elif confirm "Add $PREFIX/bin to PATH in login/shell profiles (${profile_names[*]}) so Hyprland autostart finds 'caelestia' on boot?" y; then
+        elif confirm "Add 'caelestia' to your terminal PATH (${profile_names[*]})?" y; then
             for pf in "${missing_profiles[@]}"; do
                 printf '\n# Added by vacuited-cli install.sh\ncase ":$PATH:" in\n    *:"%s":*) ;;\n    *) export PATH="%s:$PATH" ;;\nesac\n' "$path_expr" "$path_expr" >> "$pf"
                 info "Added $PREFIX/bin to PATH in $(basename "$pf")"
@@ -574,6 +574,7 @@ ensure_local_bin_in_path() {
 
 install_system_shim() {
     [ "$NO_PATH" -eq 0 ] || return 0
+    [ "${VACUITED_FROM_SHELL_INSTALLER:-0}" != "1" ] || return 0
     [ "$PREFIX" = "$HOME/.local" ] || return 0
     [ -n "$SUDO" ] || return 0
 
@@ -631,7 +632,7 @@ EOF
         return 0
     fi
 
-    if confirm "Install /usr/local/bin/caelestia shim so display managers and Hyprland always find 'caelestia' on boot?" y; then
+    if confirm "Install /usr/local/bin/caelestia so Hyprland always finds it?" y; then
         if [ "$DRY_RUN" -eq 1 ]; then
             run_priv install -Dm755 "<tmp>/caelestia" "$shim_path"
         else
