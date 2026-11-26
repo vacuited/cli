@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import signal
 import time
 from pathlib import Path
@@ -7,7 +8,7 @@ import subprocess
 from argparse import Namespace
 
 from caelestia.utils.io import fatal, warn
-from caelestia.utils.paths import c_cache_dir
+from caelestia.utils.paths import c_cache_dir, config_dir
 
 
 class Command:
@@ -41,7 +42,110 @@ class Command:
     def shell(self, *args: str) -> str:
         return subprocess.check_output(["qs", "-c", "caelestia", *args], text=True)
 
+    def _find_caelestia_qml_dir(self) -> Path | None:
+        candidates: list[Path] = []
+        for env_key in ("QML_IMPORT_PATH", "QML2_IMPORT_PATH"):
+            raw = os.environ.get(env_key, "")
+            for part in raw.split(":"):
+                if part:
+                    candidates.append(Path(part))
+        candidates.extend([Path("/usr/lib/qt6/qml"), Path("/usr/lib64/qt6/qml")])
+
+        for base in candidates:
+            if (base / "Caelestia" / "qmldir").is_file():
+                return base / "Caelestia"
+
+        for qp in ("qtpaths6", "qtpaths-qt6", "/usr/lib/qt6/bin/qtpaths6", "/usr/lib64/qt6/bin/qtpaths6"):
+            exe = shutil.which(qp) if "/" not in qp else (qp if os.access(qp, os.X_OK) else None)
+            if not exe:
+                continue
+            proc = subprocess.run([exe, "--query", "QT_INSTALL_QML"], capture_output=True, text=True, check=False)
+            if proc.returncode == 0 and proc.stdout.strip():
+                qml_dir = Path(proc.stdout.strip()) / "Caelestia"
+                if (qml_dir / "qmldir").is_file():
+                    return qml_dir
+            break
+        return None
+
+    def preflight_check(self) -> None:
+        try:
+            qs_root = config_dir / "quickshell"
+            root_qml = qs_root / "shell.qml"
+            if root_qml.exists() or root_qml.is_symlink():
+                warn(f"Found {root_qml}; Quickshell treats root shell.qml as default and ignores 'quickshell/caelestia'.")
+
+            qs_dir = qs_root / "caelestia"
+            if not qs_dir.exists():
+                return
+
+            shell_qml = qs_dir / "shell.qml"
+            is_vacuited_qml = (qs_dir / "services" / "Skwd.qml").is_file()
+            if not is_vacuited_qml and shell_qml.is_file():
+                is_vacuited_qml = "vacuited/shell" in shell_qml.read_text(encoding="utf-8", errors="ignore")
+            if not is_vacuited_qml:
+                return
+
+            plugin_dir = self._find_caelestia_qml_dir()
+            if plugin_dir is None:
+                warn("Caelestia C++ QML plugin not found. Re-run ./install.sh from your vacuited/shell repo.")
+                return
+
+            if not (plugin_dir / ".vacuited-plugin").is_file() and not (plugin_dir / "Images" / "qmldir").is_file():
+                warn(
+                    f"Plugin mismatch (split-brain): {qs_dir} has vacuited-shell QML, "
+                    f"but {plugin_dir} appears to be upstream caelestia-shell. "
+                    f"Re-run vacuited/shell ./install.sh to rebuild the plugin, or remove {qs_dir} to use upstream."
+                )
+                return
+
+            ldd_bin = shutil.which("ldd")
+            if not ldd_bin:
+                return
+
+            sos = sorted((plugin_dir / "lib").glob("*.so"))
+            if not sos:
+                return
+
+            proc = subprocess.run([ldd_bin, *(str(p) for p in sos)], capture_output=True, text=True, check=False)
+            core_missing: dict[str, list[str]] = {}
+            qs_missing: list[str] = []
+            current_so = sos[0].name if len(sos) == 1 else ""
+
+            for line in proc.stdout.splitlines():
+                stripped = line.strip()
+                if stripped.endswith(":") and stripped.startswith("/"):
+                    current_so = Path(stripped[:-1]).name
+                    continue
+                if "=> not found" in stripped:
+                    soname = stripped.split("=>", 1)[0].strip()
+                    if "quickshare" in current_so:
+                        if soname not in qs_missing:
+                            qs_missing.append(soname)
+                    else:
+                        core_missing.setdefault(current_so or "plugin", [])
+                        if soname not in core_missing[current_so or "plugin"]:
+                            core_missing[current_so or "plugin"].append(soname)
+
+            if core_missing:
+                details = "; ".join(f"{so}: {', '.join(libs)}" for so, libs in core_missing.items())
+                all_libs = {lib for libs in core_missing.values() for lib in libs}
+                if any("libcava" in lib or "libsndio" in lib for lib in all_libs):
+                    hint = "Rebuild libcava first (e.g. 'paru -S --rebuild libcava'), then re-run vacuited/shell ./install.sh."
+                else:
+                    hint = "Re-run ./install.sh from your vacuited/shell repo to rebuild the plugin."
+                warn(f"Missing shared library dependency in Caelestia plugin ({details}). {hint}")
+
+            if qs_missing:
+                warn(
+                    f"Optional Quick Share plugin missing {', '.join(qs_missing)}; "
+                    "Quick Share will stay disabled until vacuited/shell ./install.sh is re-run."
+                )
+        except Exception:
+            pass
+
     def start_shell(self) -> None:
+        self.preflight_check()
+
         # Hardware Decoder Injection
         try:
             decoder_file = Path(os.path.expanduser("~/.cache/caelestia/hwDecoder.txt"))

@@ -596,7 +596,28 @@ case ":${PATH:-}:" in
     *) export PATH="${HOME}/.local/bin${PATH:+:${PATH}}" ;;
 esac
 if [ -x "${HOME}/.local/bin/caelestia" ]; then
+    _pyver=""
+    if [ -L /usr/bin/python3 ]; then
+        _pybin="$(readlink /usr/bin/python3 2>/dev/null || true)"
+        _pybin="${_pybin##*/}"
+        case "$_pybin" in
+            python3.*) _pyver="$_pybin" ;;
+        esac
+    fi
+    if [ -n "$_pyver" ] \
+        && [ ! -d "${HOME}/.local/lib/${_pyver}/site-packages/caelestia" ] \
+        && [ ! -d "${HOME}/.local/lib64/${_pyver}/site-packages/caelestia" ]; then
+        for _old_sp in "${HOME}/.local/lib"/python3.*/site-packages/caelestia "${HOME}/.local/lib64"/python3.*/site-packages/caelestia; do
+            if [ -d "$_old_sp" ] && ! /usr/bin/python3 -c 'import caelestia' >/dev/null 2>&1; then
+                printf '%s\n' "caelestia: Python updated to ${_pyver}; rebuild vacuited-cli (~/.local/bin/caelestia) with ./install.sh or 'caelestia' repo install.sh" >&2
+                exit 1
+            fi
+        done
+    fi
     exec "${HOME}/.local/bin/caelestia" "$@"
+fi
+if [ -x /usr/bin/caelestia ]; then
+    exec /usr/bin/caelestia "$@"
 fi
 printf '%s\n' "caelestia: not installed for ${USER:-user} (${HOME}/.local/bin/caelestia missing)" >&2
 exit 127
@@ -718,8 +739,10 @@ Try:  caelestia -h
 EOF
 
 if compgen -G "/sys/devices/platform/hp-wmi/hwmon/hwmon*/pwm1_enable" >/dev/null \
+    && compgen -G "/sys/devices/platform/hp-wmi/hwmon/hwmon*/fan1_input" >/dev/null \
     && compgen -G "/sys/devices/platform/hp-wmi/hwmon/hwmon*/fan2_input" >/dev/null \
     && grep -qiE 'victus|omen' /sys/class/dmi/id/product_name 2>/dev/null \
+    && grep -qw 'cool' /sys/firmware/acpi/platform_profile_choices 2>/dev/null \
     && [ ! -x /usr/local/bin/caelestia-hardware-helper ]; then
     info "HP Victus/OMEN fan controller detected, but /usr/local/bin/caelestia-hardware-helper is missing."
     info "Run vacuited-shell's install.sh --hardware to install the helper and polkit rule."
